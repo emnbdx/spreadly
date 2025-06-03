@@ -1,6 +1,6 @@
 <?php
   require 'loader.php';
-  $end = new DateTime(getenv('EndDate')) < new DateTime('NOW');
+  $end = new DateTime($_SERVER['EndDate']) < new DateTime('NOW');
 
   if(!$end) {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {

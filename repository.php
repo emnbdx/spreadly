@@ -6,25 +6,22 @@ class Repository
 
     public function __construct()
     {
-        $this->db = new PDO(
-            'mysql:host=' . getenv('DbUrl') . ';dbname=' . getenv('DbName') . ';charset=utf8mb4',
-            getenv('DbUser'),
-            getenv('DbPassword'),
-            array(
-                PDO::MYSQL_ATTR_SSL_CA => '/path/to/ssl-cert.pem',
-                PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => false,
-            )
+        $options = array(
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         );
-        $this->db->setAttribute(
-            PDO::ATTR_ERRMODE,
-            PDO::ERRMODE_EXCEPTION
+        
+        $this->db = new PDO(
+            'mysql:host=' . $_SERVER['DbUrl'] . ';dbname=' . $_SERVER['DbName'] . ';charset=utf8mb4',
+            $_SERVER['DbUser'],
+            $_SERVER['DbPassword'],
+            $options
         );
     }
 
     public function getReceivers() {
         $stmt = $this->db->prepare('
             SELECT *
-            FROM receiver
+            FROM ' . $_SERVER['DbPrefix'] . 'receiver
             ORDER BY name
         ');
             
@@ -35,7 +32,7 @@ class Repository
     public function getLoves($id) {
         $stmt = $this->db->prepare('
             SELECT *
-            FROM love
+            FROM ' . $_SERVER['DbPrefix'] . 'love
             WHERE id_receiver = ?
         ');
             
@@ -45,7 +42,7 @@ class Repository
 
     public function insertLove($to, $from, $message) {
         $stmt = $this->db->prepare('
-            INSERT INTO love (id_receiver, sender, content)
+            INSERT INTO ' . $_SERVER['DbPrefix'] . 'love (id_receiver, sender, content)
             VALUES (?, ?, ?)
         ');
         $stmt->execute([$to, $from, $message]);
