@@ -1,0 +1,112 @@
+{% extends "layout.twig" %}
+
+{% block title %}Modifier le Spreadly - Spreadly{% endblock %}
+
+{% block font_size %}16px{% endblock %}
+
+{% block extra_styles %}
+.container-fluid {
+    background-color: rgba(255, 255, 255, 0.95);
+    min-height: 100vh;
+    padding: 2em;
+}
+.form-container {
+    max-width: 600px;
+    margin: 0 auto;
+}
+{% endblock %}
+
+{% block github_link %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="form-container">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1>✏️ Modifier le Spreadly</h1>
+                    <a href="/campaigns" class="btn btn-secondary">← Retour</a>
+                </div>
+                
+                {% if error %}
+                    <div class="alert alert-danger" role="alert">
+                        {{ error }}
+                    </div>
+                {% endif %}
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h5>📝 Informations du Spreadly</h5>
+                        <small class="text-muted">Slug: {{ campaign.slug }}</small>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="/campaigns/edit/{{ campaign.id }}">
+                            <div class="form-group mb-3">
+                                <label for="name">Nom du Spreadly *</label>
+                                <input type="text" class="form-control" id="name" name="name" required 
+                                       value="{{ campaign.name }}" placeholder="Ex: Noël 2024, Saint-Valentin...">
+                                <small class="form-text text-muted">Le nom affiché de votre Spreadly</small>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group mb-3">
+                                        <label for="start_date">Date de début *</label>
+                                        <input type="datetime-local" class="form-control" id="start_date" name="start_date" required
+                                               value="{{ campaign.start_date|date('Y-m-d\\TH:i') }}">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group mb-3">
+                                        <label for="end_date">Date de fin *</label>
+                                        <input type="datetime-local" class="form-control" id="end_date" name="end_date" required
+                                               value="{{ campaign.end_date|date('Y-m-d\\TH:i') }}">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group mb-3">
+                                <label for="theme">Thème</label>
+                                <select class="form-control" id="theme" name="theme">
+                                    <option value="christmas" {{ campaign.theme == 'christmas' ? 'selected' : '' }}>🎄 Noël</option>
+                                    <option value="valentine" {{ campaign.theme == 'valentine' ? 'selected' : '' }}>💕 Saint-Valentin</option>
+                                    <option value="birthday" {{ campaign.theme == 'birthday' ? 'selected' : '' }}>🎂 Anniversaire</option>
+                                    <option value="general" {{ campaign.theme == 'general' ? 'selected' : '' }}>💌 Général</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group mb-3">
+                                <label for="mail_subject">Sujet de l'email</label>
+                                <input type="text" class="form-control" id="mail_subject" name="mail_subject" 
+                                       value="{{ campaign.mail_subject }}" placeholder="Laissez vide pour générer automatiquement">
+                                <small class="form-text text-muted">Le sujet des emails envoyés aux destinataires</small>
+                            </div>
+                            
+                            <div class="form-group mb-3">
+                                <label for="mail_template_id">ID Template Mailjet (optionnel)</label>
+                                <input type="text" class="form-control" id="mail_template_id" name="mail_template_id" 
+                                       value="{{ campaign.mail_template_id }}" placeholder="Ex: 123456">
+                                <small class="form-text text-muted">ID du template Mailjet à utiliser</small>
+                            </div>
+                            
+                            <div class="form-check mb-3">
+                                <input type="checkbox" class="form-check-input" id="is_active" name="is_active" 
+                                       {{ campaign.is_active ? 'checked' : '' }}>
+                                <label class="form-check-label" for="is_active">
+                                    Spreadly actif
+                                </label>
+                                <small class="form-text text-muted">Les utilisateurs peuvent envoyer des messages</small>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between">
+                                <a href="/campaigns" class="btn btn-secondary">Annuler</a>
+                                <button type="submit" class="btn btn-primary">💾 Sauvegarder</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,229 @@
+{% extends "admin-layout.twig" %}
+
+{% block title %}Administration - Spreadly{% endblock %}
+
+{% block font_size %}16px{% endblock %}
+
+{% block extra_styles %}
+.form-check-input:checked {
+    background-color: var(--accent-primary);
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 0.2rem rgba(79, 172, 254, 0.25);
+}
+
+.form-check-input {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: var(--glass-border);
+}
+
+.form-check-label {
+    color: var(--text-secondary);
+}
+
+.form-text {
+    color: var(--text-muted);
+}
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="section-title">
+        <i class="fas fa-users-cog me-2"></i>Gestion des utilisateurs
+    </h1>
+    <div class="d-flex align-items-center gap-2">
+        <span class="text-muted me-2">
+            <i class="fas fa-flag me-1"></i>{{ current_user.campaign_name }}
+        </span>
+        <span class="text-muted me-3">
+            <i class="fas fa-user-shield me-1"></i>{{ current_user.name }}
+        </span>
+        <a href="/campaigns" class="btn btn-outline-light btn-sm">
+            <i class="fas fa-list me-1"></i>Mes Campagnes
+        </a>
+        <a href="/create-spreadly" class="btn btn-success btn-sm">
+            <i class="fas fa-plus me-1"></i>Nouveau
+        </a>
+        <a href="/" class="btn btn-primary btn-sm">
+            <i class="fas fa-home me-1"></i>Accueil
+        </a>
+    </div>
+</div>
+
+<!-- Stats Dashboard -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-value">{{ users|length }}</div>
+        <div class="stat-label">
+            <i class="fas fa-users me-1"></i>Total utilisateurs
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ users|filter(u => u.receiver)|length }}</div>
+        <div class="stat-label">
+            <i class="fas fa-inbox me-1"></i>Peuvent recevoir
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ users|filter(u => u.is_admin)|length }}</div>
+        <div class="stat-label">
+            <i class="fas fa-user-shield me-1"></i>Administrateurs
+        </div>
+    </div>
+</div>
+
+{% if success %}
+    <div class="alert alert-success mb-4" role="alert">
+        <i class="fas fa-check-circle me-2"></i>{{ success }}
+    </div>
+{% endif %}
+
+{% if error %}
+    <div class="alert alert-danger mb-4" role="alert">
+        <i class="fas fa-exclamation-triangle me-2"></i>{{ error }}
+    </div>
+{% endif %}
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="glass-card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-user-plus me-2"></i>Créer un nouvel utilisateur
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="/admin/create">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">
+                            <i class="fas fa-user me-2"></i>Nom
+                        </label>
+                        <input type="text" id="name" name="name" class="form-control" required 
+                               placeholder="Nom complet">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="email" class="form-label">
+                            <i class="fas fa-envelope me-2"></i>Email
+                        </label>
+                        <input type="email" id="email" name="email" class="form-control" required
+                               placeholder="adresse@email.com">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="receiver" name="receiver" checked>
+                            <label class="form-check-label" for="receiver">
+                                <i class="fas fa-inbox me-2"></i>Peut recevoir des messages
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="admin" name="admin">
+                            <label class="form-check-label" for="admin">
+                                <i class="fas fa-user-shield me-2"></i>Administrateur
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="fas fa-plus me-2"></i>Créer l'utilisateur
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        <div class="glass-card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-file-csv me-2"></i>Import CSV
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="/admin/import" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="csv_file" class="form-label">
+                            <i class="fas fa-upload me-2"></i>Fichier CSV
+                        </label>
+                        <input type="file" id="csv_file" name="csv_file" class="form-control" accept=".csv" required>
+                        <div class="form-text">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Format : nom, email, receiver (true/false), admin (true/false)
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-cloud-upload-alt me-2"></i>Importer les utilisateurs
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="glass-card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-users me-2"></i>Tous les utilisateurs
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th><i class="fas fa-hashtag me-1"></i>ID</th>
+                                <th><i class="fas fa-user me-1"></i>Nom</th>
+                                <th><i class="fas fa-envelope me-1"></i>Email</th>
+                                <th><i class="fas fa-inbox me-1"></i>Peut recevoir</th>
+                                <th><i class="fas fa-user-shield me-1"></i>Admin</th>
+                                <th><i class="fas fa-calendar me-1"></i>Créé le</th>
+                                <th><i class="fas fa-cogs me-1"></i>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in users %}
+                            <tr>
+                                <td><strong>{{ user.id }}</strong></td>
+                                <td>{{ user.name }}</td>
+                                <td>{{ user.email }}</td>
+                                <td>
+                                    <span class="badge bg-{{ user.receiver ? 'success' : 'secondary' }}">
+                                        <i class="fas fa-{{ user.receiver ? 'check' : 'times' }} me-1"></i>
+                                        {{ user.receiver ? 'Oui' : 'Non' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ user.is_admin ? 'warning' : 'secondary' }}">
+                                        <i class="fas fa-{{ user.is_admin ? 'shield-alt' : 'times' }} me-1"></i>
+                                        {{ user.is_admin ? 'Oui' : 'Non' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <small>{{ user.created_at|date('d/m/Y H:i') }}</small>
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a href="/admin/edit/{{ user.id }}" class="btn btn-sm btn-primary" title="Modifier">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        {% if user.id != current_user.id %}
+                                            <form method="POST" action="/admin/delete/{{ user.id }}" class="d-inline" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')">
+                                                <button type="submit" class="btn btn-sm btn-danger" title="Supprimer">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
