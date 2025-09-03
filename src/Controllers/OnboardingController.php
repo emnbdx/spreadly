@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Models\Campaign;
 use App\Models\User;
+use App\Models\CampaignUser;
 use App\Models\CampaignAdmin;
 use App\Services\EmailService;
 use Psr\Http\Message\ResponseInterface;
@@ -14,6 +15,7 @@ class OnboardingController
 {
     private Campaign $campaignModel;
     private User $userModel;
+    private CampaignUser $campaignUserModel;
     private CampaignAdmin $campaignAdminModel;
     private EmailService $emailService;
     private Twig $view;
@@ -21,12 +23,14 @@ class OnboardingController
     public function __construct(
         Campaign $campaignModel,
         User $userModel,
+        CampaignUser $campaignUserModel,
         CampaignAdmin $campaignAdminModel,
         EmailService $emailService,
         Twig $view
     ) {
         $this->campaignModel = $campaignModel;
         $this->userModel = $userModel;
+        $this->campaignUserModel = $campaignUserModel;
         $this->campaignAdminModel = $campaignAdminModel;
         $this->emailService = $emailService;
         $this->view = $view;
@@ -109,8 +113,8 @@ class OnboardingController
 
         // Vérifier si l'email existe déjà (seulement pour les nouveaux utilisateurs)
         if (!$isLoggedIn) {
-            $existingUsers = $this->userModel->findAllCampaignsByEmail($userEmail);
-            if (!empty($existingUsers)) {
+            $existingUser = $this->userModel->findByEmail($userEmail);
+            if ($existingUser) {
                 $_SESSION['error'] = 'Un compte avec cet email existe déjà. Utilisez la connexion.';
                 $this->saveFormData($data);
                 return $response->withHeader('Location', '/create-spreadly')->withStatus(302);
@@ -128,7 +132,14 @@ class OnboardingController
 
             if ($isLoggedIn) {
                 // Utilisateur connecté : créer son profil dans cette nouvelle Spreadly
-                $userId = $this->userModel->create($campaignId, $userName, $userEmail, false);
+                $user = $this->userModel->findByEmail($userEmail);
+                if (!$user) {
+                    $userId = $this->userModel->create($userName, $userEmail);
+                } else {
+                    $userId = $user['id'];
+                }
+
+                $this->campaignUserModel->create($campaignId, $userId, false);
 
                 // Ajouter comme admin de cette Spreadly
                 $this->campaignAdminModel->addAdmin($userId, $campaignId);
@@ -143,7 +154,8 @@ class OnboardingController
                 return $response->withHeader('Location', '/')->withStatus(302);
             } else {
                 // Nouvel utilisateur : créer le compte et envoyer le code
-                $userId = $this->userModel->create($campaignId, $userName, $userEmail, false);
+                $userId = $this->userModel->create($userName, $userEmail);
+                $this->campaignUserModel->create($campaignId, $userId, false);
 
                 // Ajouter comme admin de cette Spreadly
                 $this->campaignAdminModel->addAdmin($userId, $campaignId);

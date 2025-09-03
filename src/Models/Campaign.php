@@ -69,8 +69,8 @@ class Campaign
     {
         $stmt = $this->db->prepare("
             INSERT INTO {$this->tablePrefix}campaign 
-            (name, slug, start_date, end_date, theme, mail_subject, mail_template_id, is_active) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            (name, slug, start_date, end_date, theme, mail_subject, is_active) 
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         ");
 
         $stmt->execute([
@@ -80,7 +80,6 @@ class Campaign
             $endDate,
             $options['theme'] ?? 'christmas',
             $options['mail_subject'] ?? 'Your love messages',
-            $options['mail_template_id'] ?? '',
             $options['is_active'] ?? true ? 1 : 0
         ]);
 
@@ -92,7 +91,7 @@ class Campaign
         $stmt = $this->db->prepare("
             UPDATE {$this->tablePrefix}campaign 
             SET name = ?, slug = ?, start_date = ?, end_date = ?, 
-                theme = ?, mail_subject = ?, mail_template_id = ?, is_active = ?
+                theme = ?, mail_subject = ?, is_active = ?
             WHERE id = ?
         ");
 
@@ -103,7 +102,6 @@ class Campaign
             $endDate,
             $options['theme'] ?? 'christmas',
             $options['mail_subject'] ?? 'Your love messages',
-            $options['mail_template_id'] ?? '',
             $options['is_active'] ?? true ? 1 : 0,
             $id
         ]);
@@ -111,12 +109,31 @@ class Campaign
 
     public function delete(int $id): bool
     {
-        $stmt = $this->db->prepare("
-            DELETE FROM {$this->tablePrefix}campaign 
-            WHERE id = ?
-        ");
+        try {
+            $this->db->beginTransaction();
 
-        return $stmt->execute([$id]);
+            // Supprimer les messages d'amour associés
+            $stmt = $this->db->prepare("DELETE FROM {$this->tablePrefix}love WHERE campaign_id = ?");
+            $stmt->execute([$id]);
+
+            // Supprimer les administrateurs de la campagne
+            $stmt = $this->db->prepare("DELETE FROM {$this->tablePrefix}campaign_admin WHERE campaign_id = ?");
+            $stmt->execute([$id]);
+
+            // Supprimer les utilisateurs de la campagne
+            $stmt = $this->db->prepare("DELETE FROM {$this->tablePrefix}campaign_user WHERE campaign_id = ?");
+            $stmt->execute([$id]);
+
+            // Supprimer la campagne
+            $stmt = $this->db->prepare("DELETE FROM {$this->tablePrefix}campaign WHERE id = ?");
+            $stmt->execute([$id]);
+
+            $this->db->commit();
+            return true;
+        } catch (\Exception $e) {
+            $this->db->rollBack();
+            throw $e;
+        }
     }
 
     public function isActive(int $campaignId): bool

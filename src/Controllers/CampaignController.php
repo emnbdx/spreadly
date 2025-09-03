@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Models\Campaign;
 use App\Models\User;
+use App\Models\CampaignUser;
 use App\Models\Love;
 use App\Models\CampaignAdmin;
 use Psr\Http\Message\ResponseInterface;
@@ -14,14 +15,16 @@ class CampaignController
 {
     private Campaign $campaignModel;
     private User $userModel;
+    private CampaignUser $campaignUserModel;
     private Love $loveModel;
     private CampaignAdmin $campaignAdminModel;
     private Twig $view;
 
-    public function __construct(Campaign $campaignModel, User $userModel, Love $loveModel, CampaignAdmin $campaignAdminModel, Twig $view)
+    public function __construct(Campaign $campaignModel, User $userModel, CampaignUser $campaignUserModel, Love $loveModel, CampaignAdmin $campaignAdminModel, Twig $view)
     {
         $this->campaignModel = $campaignModel;
         $this->userModel = $userModel;
+        $this->campaignUserModel = $campaignUserModel;
         $this->loveModel = $loveModel;
         $this->campaignAdminModel = $campaignAdminModel;
         $this->view = $view;
@@ -30,7 +33,7 @@ class CampaignController
     public function index(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {
         // Récupérer toutes les Spreadly de l'utilisateur connecté
-        $userCampaigns = $this->userModel->findAllCampaignsByEmail($_SESSION['user_email']);
+        $userCampaigns = $this->campaignUserModel->findByEmail($_SESSION['user_email']);
 
         $data = [
             'campaigns' => $userCampaigns,
@@ -66,7 +69,6 @@ class CampaignController
         $endDate = trim($data['end_date'] ?? '');
         $theme = trim($data['theme'] ?? 'christmas');
         $mailSubject = trim($data['mail_subject'] ?? '');
-        $mailTemplateId = trim($data['mail_template_id'] ?? '');
         $isActive = isset($data['is_active']);
 
         if (empty($name) || empty($startDate) || empty($endDate)) {
@@ -89,7 +91,6 @@ class CampaignController
             $campaignId = $this->campaignModel->create($name, $slug, $startDate, $endDate, [
                 'theme' => $theme,
                 'mail_subject' => $mailSubject ?: "Messages d'amour - $name",
-                'mail_template_id' => $mailTemplateId,
                 'is_active' => $isActive
             ]);
 
@@ -142,7 +143,25 @@ class CampaignController
                 ->withStatus(302);
         }
 
+        // Vérifier que l'utilisateur a accès à cette campagne
         $currentUser = $this->userModel->findById($_SESSION['user_id']);
+        $userInCampaign = $this->userModel->findByEmail($currentUser['email'], $campaignId);
+
+        if (!$userInCampaign) {
+            $_SESSION['error'] = 'Vous n\'avez pas accès à ce Spreadly';
+            return $response
+                ->withHeader('Location', '/campaigns')
+                ->withStatus(302);
+        }
+
+        // Vérifier que l'utilisateur est admin de cette campagne
+        $isAdmin = $this->campaignAdminModel->isAdmin($userInCampaign['id'], $campaignId);
+        if (!$isAdmin) {
+            $_SESSION['error'] = 'Vous devez être administrateur pour modifier un Spreadly';
+            return $response
+                ->withHeader('Location', '/campaigns')
+                ->withStatus(302);
+        }
 
         $data = [
             'campaign' => $campaign,
@@ -164,7 +183,6 @@ class CampaignController
         $endDate = trim($data['end_date'] ?? '');
         $theme = trim($data['theme'] ?? 'christmas');
         $mailSubject = trim($data['mail_subject'] ?? '');
-        $mailTemplateId = trim($data['mail_template_id'] ?? '');
         $isActive = isset($data['is_active']);
 
         if (empty($name) || empty($startDate) || empty($endDate)) {
@@ -188,7 +206,6 @@ class CampaignController
             $this->campaignModel->update($campaignId, $name, $slug, $startDate, $endDate, [
                 'theme' => $theme,
                 'mail_subject' => $mailSubject ?: "Messages d'amour - $name",
-                'mail_template_id' => $mailTemplateId,
                 'is_active' => $isActive
             ]);
 
@@ -206,9 +223,43 @@ class CampaignController
     {
         $campaignId = (int) $request->getAttribute('id');
 
+        // Vérifier que la campagne existe
+        $campaign = $this->campaignModel->findById($campaignId);
+        if (!$campaign) {
+            $_SESSION['error'] = 'Spreadly non trouvé';
+            return $response
+                ->withHeader('Location', '/campaigns')
+                ->withStatus(302);
+        }
+
+        // Vérifier que l'utilisateur a accès à cette campagne
+        $currentUser = $this->userModel->findById($_SESSION['user_id']);
+        $userInCampaign = $this->userModel->findByEmail($currentUser['email'], $campaignId);
+
+        if (!$userInCampaign) {
+            $_SESSION['error'] = 'Vous n\'avez pas accès à ce Spreadly';
+            return $response
+                ->withHeader('Location', '/campaigns')
+                ->withStatus(302);
+        }
+
+        // Vérifier que l'utilisateur est admin de cette campagne
+        $isAdmin = $this->campaignAdminModel->isAdmin($userInCampaign['id'], $campaignId);
+        if (!$isAdmin) {
+            $_SESSION['error'] = 'Vous devez être administrateur pour supprimer un Spreadly';
+            return $response
+                ->withHeader('Location', '/campaigns')
+                ->withStatus(302);
+        }
+
         try {
             $this->campaignModel->delete($campaignId);
             $_SESSION['success'] = 'Spreadly supprimé avec succès';
+
+            // Si c'était la campagne actuelle, nettoyer la session
+            if ($_SESSION['campaign_id'] == $campaignId) {
+                unset($_SESSION['campaign_id'], $_SESSION['campaign_name'], $_SESSION['campaign_slug']);
+            }
         } catch (\Exception $e) {
             $_SESSION['error'] = 'Erreur lors de la suppression : ' . $e->getMessage();
         }

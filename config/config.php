@@ -16,12 +16,10 @@ return [
     ],
 
     'email' => [
-        'mailjet_public_key' => $_SERVER['MailjetPublicKey'] ?? '',
-        'mailjet_private_key' => $_SERVER['MailjetPrivateKey'] ?? '',
+        'brevo_api_key' => $_SERVER['BrevoApiKey'] ?? '',
         'mail_from_email' => $_SERVER['MailFromEmail'] ?? '',
         'mail_from_name' => $_SERVER['MailFromName'] ?? '',
         'mail_subject' => $_SERVER['MailSubject'] ?? 'Your love messages',
-        'mail_template_id' => $_SERVER['MailTemplateId'] ?? '',
     ],
 
     'app' => [

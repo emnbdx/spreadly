@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Models\User;
+use App\Models\CampaignUser;
 use App\Services\EmailService;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -11,12 +12,14 @@ use Slim\Views\Twig;
 class AuthController
 {
     private User $userModel;
+    private CampaignUser $campaignUserModel;
     private EmailService $emailService;
     private Twig $view;
 
-    public function __construct(User $userModel, EmailService $emailService, Twig $view)
+    public function __construct(User $userModel, CampaignUser $campaignUserModel, EmailService $emailService, Twig $view)
     {
         $this->userModel = $userModel;
+        $this->campaignUserModel = $campaignUserModel;
         $this->emailService = $emailService;
         $this->view = $view;
     }
@@ -55,15 +58,14 @@ class AuthController
         }
 
         // Vérifier si c'est un utilisateur existant
-        $existingUsers = $this->userModel->findAllCampaignsByEmail($email);
+        $user = $this->userModel->findByEmail($email);
 
-        if (empty($existingUsers)) {
+        if (!$user) {
             // Email non trouvé
             unset($_SESSION['success'], $_SESSION['code_sent'], $_SESSION['login_email']);
             $_SESSION['error'] = 'Email non trouvé. Créez d\'abord un Spreadly.';
         } else {
             // Utilisateur existant - utiliser la logique normale
-            $user = $existingUsers[0]; // Prendre le premier utilisateur trouvé
             $code = $this->userModel->generateLoginCode($user['id']);
 
             if ($this->emailService->sendLoginCode($email, $code)) {
@@ -106,11 +108,11 @@ class AuthController
                 $targetCampaignSlug = $_SESSION['target_campaign_slug'];
 
                 // Vérifier si l'utilisateur a accès à cette Spreadly
-                $userInTargetCampaign = $this->userModel->findByEmail($email, $targetCampaignId);
+                $userInTargetCampaign = $this->campaignUserModel->findByEmailAndCampaign($email, $targetCampaignId);
 
                 if ($userInTargetCampaign) {
                     // L'utilisateur a accès à la Spreadly cible
-                    $_SESSION['user_id'] = $userInTargetCampaign['id'];
+                    $_SESSION['user_id'] = $userInTargetCampaign['user_id'];
                     $_SESSION['user_name'] = $userInTargetCampaign['name'];
                     $_SESSION['user_email'] = $userInTargetCampaign['email'];
                     $_SESSION['campaign_id'] = $targetCampaignId;
@@ -136,12 +138,12 @@ class AuthController
 
             // Logique normale de connexion (pas de Spreadly cible ou pas d'accès)
             // Trouver toutes les Spreadlys de cet utilisateur
-            $userCampaigns = $this->userModel->findAllCampaignsByEmail($email);
+            $userCampaigns = $this->campaignUserModel->findByEmail($email);
 
             if (count($userCampaigns) === 1) {
                 // L'utilisateur n'a qu'une seule Spreadly, se connecter directement
                 $campaign = $userCampaigns[0];
-                $_SESSION['user_id'] = $campaign['id'];
+                $_SESSION['user_id'] = $campaign['user_id'];
                 $_SESSION['user_name'] = $campaign['name'];
                 $_SESSION['user_email'] = $campaign['email'];
                 $_SESSION['campaign_id'] = $campaign['campaign_id'];
@@ -155,6 +157,7 @@ class AuthController
                     ->withStatus(302);
             } elseif (count($userCampaigns) > 1) {
                 // L'utilisateur a plusieurs Spreadlys, stocker les infos de base et rediriger vers la sélection
+                $_SESSION['user_id'] = $user['id'];
                 $_SESSION['user_email'] = $email;
                 $_SESSION['user_name'] = $user['name'];
 
@@ -165,6 +168,7 @@ class AuthController
                     ->withStatus(302);
             } else {
                 // L'utilisateur n'a aucune Spreadly, le rediriger vers la création de Spreadly
+                $_SESSION['user_id'] = $user['id'];
                 $_SESSION['user_email'] = $email;
                 $_SESSION['user_name'] = $user['name'];
                 $_SESSION['success'] = 'Bienvenue ! Créez votre premier Spreadly pour commencer.';

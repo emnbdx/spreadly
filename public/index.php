@@ -3,7 +3,6 @@
 use App\Controllers\AuthController;
 use App\Controllers\HomeController;
 use App\Controllers\AdminController;
-use App\Controllers\SenderController;
 use App\Controllers\CampaignController;
 use App\Controllers\OnboardingController;
 use App\Middleware\AuthMiddleware;
@@ -11,6 +10,7 @@ use App\Middleware\AdminMiddleware;
 use App\Middleware\CampaignMiddleware;
 use App\Middleware\SessionMiddleware;
 use App\Models\User;
+use App\Models\CampaignUser;
 use App\Models\Love;
 use App\Models\Campaign;
 use App\Models\CampaignAdmin;
@@ -56,6 +56,10 @@ $container->set(Campaign::class, function (Container $c) use ($config) {
     return new Campaign($c->get(PDO::class), $config['database']['prefix']);
 });
 
+$container->set(CampaignUser::class, function (Container $c) use ($config) {
+    return new CampaignUser($c->get(PDO::class), $config['database']['prefix']);
+});
+
 $container->set(CampaignAdmin::class, function (Container $c) use ($config) {
     return new CampaignAdmin($c->get(PDO::class), $config['database']['prefix']);
 });
@@ -71,6 +75,7 @@ $container->set(Twig::class, function () {
 $container->set(AuthController::class, function (Container $c) {
     return new AuthController(
         $c->get(User::class),
+        $c->get(CampaignUser::class),
         $c->get(EmailService::class),
         $c->get(Twig::class)
     );
@@ -79,6 +84,7 @@ $container->set(AuthController::class, function (Container $c) {
 $container->set(HomeController::class, function (Container $c) use ($config) {
     return new HomeController(
         $c->get(User::class),
+        $c->get(CampaignUser::class),
         $c->get(Love::class),
         $c->get(Campaign::class),
         $c->get(CampaignAdmin::class),
@@ -90,16 +96,12 @@ $container->set(HomeController::class, function (Container $c) use ($config) {
 $container->set(AdminController::class, function (Container $c) {
     return new AdminController(
         $c->get(User::class),
-        $c->get(CampaignAdmin::class),
-        $c->get(Twig::class)
-    );
-});
-
-$container->set(SenderController::class, function (Container $c) {
-    return new SenderController(
-        $c->get(User::class),
+        $c->get(CampaignUser::class),
         $c->get(Love::class),
-        $c->get(EmailService::class)
+        $c->get(Campaign::class),
+        $c->get(CampaignAdmin::class),
+        $c->get(EmailService::class),
+        $c->get(Twig::class)
     );
 });
 
@@ -107,6 +109,7 @@ $container->set(CampaignController::class, function (Container $c) {
     return new CampaignController(
         $c->get(Campaign::class),
         $c->get(User::class),
+        $c->get(CampaignUser::class),
         $c->get(Love::class),
         $c->get(CampaignAdmin::class),
         $c->get(Twig::class)
@@ -117,6 +120,7 @@ $container->set(OnboardingController::class, function (Container $c) {
     return new OnboardingController(
         $c->get(Campaign::class),
         $c->get(User::class),
+        $c->get(CampaignUser::class),
         $c->get(CampaignAdmin::class),
         $c->get(EmailService::class),
         $c->get(Twig::class)
@@ -166,11 +170,10 @@ $app->group('', function ($group) {
     $group->post('/admin/edit/{id:[0-9]+}', [AdminController::class, 'updateUser']);
     $group->post('/admin/delete/{id:[0-9]+}', [AdminController::class, 'deleteUser']);
     $group->post('/admin/import', [AdminController::class, 'importUsers']);
+    $group->post('/admin/send', [AdminController::class, 'sendEmails']);
 })->add(CampaignMiddleware::class)->add(function ($request, $handler) use ($container) {
     $adminMiddleware = new AdminMiddleware($container->get(CampaignAdmin::class));
     return $adminMiddleware->process($request, $handler);
 });
-
-$app->get('/sender', [SenderController::class, 'sendEmails']);
 
 $app->run();

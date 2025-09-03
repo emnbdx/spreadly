@@ -1,7 +1,7 @@
 {
     "name": "emnbdx/spreadly",
     "require": {
-        "mailjet/mailjet-apiv3-php": "^1.5",
+        "getbrevo/brevo-php": "^1.0",
         "slim/slim": "^4.0",
         "slim/psr7": "^1.0",
         "php-di/php-di": "^6.0",

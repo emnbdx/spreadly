@@ -31,6 +31,19 @@
     box-shadow: var(--shadow-dark), var(--shadow-glow);
 }
 
+.campaign-card .card-title {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.campaign-card .text-muted {
+    color: var(--text-secondary) !important;
+}
+
+.campaign-card .text-primary {
+    color: var(--accent-primary) !important;
+}
+
 .status-badge {
     position: absolute;
     top: 15px;
@@ -115,34 +128,10 @@
     <div class="row">
         {% for campaign in campaigns %}
             <div class="col-md-6 col-lg-4 mb-4">
-                <div class="campaign-card h-100 {{ campaign.campaign_id == current_campaign_id ? 'current-campaign' : '' }}">
-                    {% set now = date() %}
-                    {% set start_date = date(campaign.start_date) %}
-                    {% set end_date = date(campaign.end_date) %}
-                    
-                    {% if campaign.is_active %}
-                        {% if now < start_date %}
-                            <span class="badge bg-info status-badge">
-                                <i class="fas fa-calendar me-1"></i>À venir
-                            </span>
-                        {% elseif now > end_date %}
-                            <span class="badge bg-secondary status-badge">
-                                <i class="fas fa-clock me-1"></i>Terminée
-                            </span>
-                        {% else %}
-                            <span class="badge bg-success status-badge">
-                                <i class="fas fa-play-circle me-1"></i>Active
-                            </span>
-                        {% endif %}
-                    {% else %}
-                        <span class="badge bg-warning status-badge">
-                            <i class="fas fa-pause-circle me-1"></i>Suspendue
-                        </span>
-                    {% endif %}
-                    
+                <div class="campaign-card h-100 {{ campaign.campaign_id == current_campaign_id ? 'current-campaign' : '' }}">                   
                     {% if campaign.campaign_id == current_campaign_id %}
-                        <span class="badge bg-primary current-badge">
-                            <i class="fas fa-map-marker-alt me-1"></i>Actuelle
+                        <span class="badge bg-primary status-badge">
+                            <i class="fas fa-map-marker-alt me-1"></i>Actuel
                         </span>
                     {% endif %}
                     
@@ -153,39 +142,7 @@
                         </small>
                     </div>
                     
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <h6 class="text-primary">
-                                <i class="fas fa-chart-bar me-2"></i>Statistiques
-                            </h6>
-                            <div class="row text-center">
-                                <div class="col-4">
-                                    <div class="stat-value">{{ campaign.user_count }}</div>
-                                    <small class="text-muted">
-                                        <i class="fas fa-users"></i>
-                                    </small>
-                                </div>
-                                <div class="col-4">
-                                    <div class="stat-value">{{ campaign.message_count }}</div>
-                                    <small class="text-muted">
-                                        <i class="fas fa-envelope"></i>
-                                    </small>
-                                </div>
-                                <div class="col-4">
-                                    <div class="text-primary">
-                                        {% if campaign.theme == 'christmas' %}
-                                            <i class="fas fa-tree fa-lg"></i>
-                                        {% elseif campaign.theme == 'party' %}
-                                            <i class="fas fa-birthday-cake fa-lg"></i>
-                                        {% else %}
-                                            <i class="fas fa-heart fa-lg"></i>
-                                        {% endif %}
-                                    </div>
-                                    <small class="text-muted">{{ campaign.theme }}</small>
-                                </div>
-                            </div>
-                        </div>
-                        
+                    <div class="card-body">                        
                         <div class="mb-3">
                             <h6 class="text-primary">
                                 <i class="fas fa-calendar-alt me-2"></i>Période
@@ -195,16 +152,19 @@
                                 <i class="fas fa-stop me-1"></i>{{ campaign.end_date|date('d/m/Y H:i') }}
                             </small>
                         </div>
-                        
-                        <div class="mb-3">
-                            <h6 class="text-primary">
-                                <i class="fas fa-user-tag me-2"></i>Votre rôle
-                            </h6>
-                            <small class="text-muted">{{ campaign.name }}</small>
-                        </div>
                     </div>
                     
                     <div class="card-footer">
+                        <div class="d-flex gap-1 mb-2">
+                            <a href="/campaigns/edit/{{ campaign.campaign_id }}" class="btn btn-outline-warning btn-sm flex-fill">
+                                <i class="fas fa-edit me-1"></i>Modifier
+                            </a>
+                            <form method="POST" action="/campaigns/delete/{{ campaign.campaign_id }}" class="d-inline flex-fill" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce Spreadly ? Cette action est irréversible.')">
+                                <button type="submit" class="btn btn-outline-danger btn-sm w-100">
+                                    <i class="fas fa-trash me-1"></i>Supprimer
+                                </button>
+                            </form>
+                        </div>
                         {% if campaign.campaign_id == current_campaign_id %}
                             <a href="/" class="btn btn-primary btn-sm w-100">
                                 <i class="fas fa-home me-1"></i>Spreadly actuel
@@ -218,60 +178,6 @@
                 </div>
             </div>
         {% endfor %}
-    </div>
-    
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="summary-card">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="fas fa-chart-pie me-2"></i>Résumé
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-value">{{ campaigns|length }}</div>
-                            <div class="stat-label">
-                                <i class="fas fa-rocket me-1"></i>Mes Spreadly
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            {% set active_campaigns = 0 %}
-                            {% for campaign in campaigns %}
-                                {% if campaign.is_active %}
-                                    {% set active_campaigns = active_campaigns + 1 %}
-                                {% endif %}
-                            {% endfor %}
-                            <div class="stat-value">{{ active_campaigns }}</div>
-                            <div class="stat-label">
-                                <i class="fas fa-play-circle me-1"></i>Spreadly actifs
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            {% set total_users = 0 %}
-                            {% for campaign in campaigns %}
-                                {% set total_users = total_users + campaign.user_count %}
-                            {% endfor %}
-                            <div class="stat-value">{{ total_users }}</div>
-                            <div class="stat-label">
-                                <i class="fas fa-users me-1"></i>Total utilisateurs
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            {% set total_messages = 0 %}
-                            {% for campaign in campaigns %}
-                                {% set total_messages = total_messages + campaign.message_count %}
-                            {% endfor %}
-                            <div class="stat-value">{{ total_messages }}</div>
-                            <div class="stat-label">
-                                <i class="fas fa-envelope me-1"></i>Total messages
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 {% endif %}
 {% endblock %} 

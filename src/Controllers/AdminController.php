@@ -3,7 +3,11 @@
 namespace App\Controllers;
 
 use App\Models\User;
+use App\Models\CampaignUser;
+use App\Models\Love;
+use App\Models\Campaign;
 use App\Models\CampaignAdmin;
+use App\Services\EmailService;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Slim\Views\Twig;
@@ -11,24 +15,32 @@ use Slim\Views\Twig;
 class AdminController
 {
     private User $userModel;
+    private CampaignUser $campaignUserModel;
+    private Love $loveModel;
+    private Campaign $campaignModel;
     private CampaignAdmin $campaignAdminModel;
+    private EmailService $emailService;
     private Twig $view;
 
-    public function __construct(User $userModel, CampaignAdmin $campaignAdminModel, Twig $view)
+    public function __construct(User $userModel, CampaignUser $campaignUserModel, Love $loveModel, Campaign $campaignModel, CampaignAdmin $campaignAdminModel, EmailService $emailService, Twig $view)
     {
         $this->userModel = $userModel;
+        $this->campaignUserModel = $campaignUserModel;
+        $this->loveModel = $loveModel;
+        $this->campaignModel = $campaignModel;
         $this->campaignAdminModel = $campaignAdminModel;
+        $this->emailService = $emailService;
         $this->view = $view;
     }
 
     public function index(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {
-        $users = $this->userModel->findAll($_SESSION['campaign_id']);
+        $users = $this->campaignUserModel->findByCampaign($_SESSION['campaign_id']);
         $currentUser = $this->userModel->findById($_SESSION['user_id']);
 
         // Ajouter le statut admin pour chaque utilisateur
         foreach ($users as &$user) {
-            $user['is_admin'] = $this->campaignAdminModel->isAdmin($user['id'], $_SESSION['campaign_id']);
+            $user['is_admin'] = $this->campaignAdminModel->isAdmin($user['user_id'], $_SESSION['campaign_id']);
         }
 
         $data = [
@@ -68,7 +80,7 @@ class AdminController
                 ->withStatus(302);
         }
 
-        $existingUser = $this->userModel->findByEmail($email, $_SESSION['campaign_id']);
+        $existingUser = $this->campaignUserModel->findByEmailAndCampaign($email, $_SESSION['campaign_id']);
         if ($existingUser) {
             unset($_SESSION['success']);
             $_SESSION['error'] = 'Un utilisateur avec cet email existe déjà dans ce Spreadly';
@@ -78,7 +90,14 @@ class AdminController
         }
 
         try {
-            $userId = $this->userModel->create($_SESSION['campaign_id'], $name, $email, $receiver);
+            $user = $this->userModel->findByEmail($email);
+            if (!$user) {
+                $userId = $this->userModel->create($name, $email);
+            } else {
+                $userId = $user['id'];
+            }
+
+            $campaignUserId = $this->campaignUserModel->create($_SESSION['campaign_id'], $userId, $receiver);
 
             // Ajouter comme admin si demandé
             if ($admin) {
@@ -99,10 +118,10 @@ class AdminController
 
     public function editUser(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {
-        $userId = (int) $request->getAttribute('id');
-        $user = $this->userModel->findById($userId);
+        $campaignUserId = (int) $request->getAttribute('id');
+        $campaignUser = $this->campaignUserModel->findByCampaignAndUser($_SESSION['campaign_id'], $campaignUserId);
 
-        if (!$user) {
+        if (!$campaignUser) {
             $_SESSION['error'] = 'Utilisateur non trouvé';
             return $response
                 ->withHeader('Location', '/admin')
@@ -110,10 +129,10 @@ class AdminController
         }
 
         // Vérifier si l'utilisateur est admin de cette Spreadly
-        $isAdmin = $this->campaignAdminModel->isAdmin($userId, $_SESSION['campaign_id']);
+        $isAdmin = $this->campaignAdminModel->isAdmin($campaignUser['user_id'], $_SESSION['campaign_id']);
 
         $data = [
-            'user' => $user,
+            'user' => $campaignUser,
             'is_admin' => $isAdmin,
             'error' => $_SESSION['error'] ?? null
         ];
@@ -125,7 +144,7 @@ class AdminController
 
     public function updateUser(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {
-        $userId = (int) $request->getAttribute('id');
+        $campaignUserId = (int) $request->getAttribute('id');
         $data = $request->getParsedBody();
         $name = trim($data['name'] ?? '');
         $email = trim($data['email'] ?? '');
@@ -135,34 +154,43 @@ class AdminController
         if (empty($name) || empty($email)) {
             $_SESSION['error'] = 'Le nom et l\'email sont requis';
             return $response
-                ->withHeader('Location', "/admin/edit/{$userId}")
+                ->withHeader('Location', "/admin/edit/{$campaignUserId}")
                 ->withStatus(302);
         }
 
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $_SESSION['error'] = 'Format d\'email invalide';
             return $response
-                ->withHeader('Location', "/admin/edit/{$userId}")
+                ->withHeader('Location', "/admin/edit/{$campaignUserId}")
                 ->withStatus(302);
         }
 
-        $existingUser = $this->userModel->findByEmail($email, $_SESSION['campaign_id']);
-        if ($existingUser && $existingUser['id'] != $userId) {
+        $campaignUser = $this->campaignUserModel->findByCampaignAndUser($_SESSION['campaign_id'], $campaignUserId);
+        if (!$campaignUser) {
+            $_SESSION['error'] = 'Utilisateur non trouvé';
+            return $response
+                ->withHeader('Location', '/admin')
+                ->withStatus(302);
+        }
+
+        $existingUser = $this->campaignUserModel->findByEmailAndCampaign($email, $_SESSION['campaign_id']);
+        if ($existingUser && $existingUser['user_id'] != $campaignUser['user_id']) {
             $_SESSION['error'] = 'Un autre utilisateur avec cet email existe déjà dans ce Spreadly';
             return $response
-                ->withHeader('Location', "/admin/edit/{$userId}")
+                ->withHeader('Location', "/admin/edit/{$campaignUserId}")
                 ->withStatus(302);
         }
 
         try {
-            $this->userModel->update($userId, $name, $email, $receiver);
+            $this->userModel->update($campaignUser['user_id'], $name, $email);
+            $this->campaignUserModel->update($campaignUser['id'], $receiver);
 
             // Gérer le statut admin
-            $currentlyAdmin = $this->campaignAdminModel->isAdmin($userId, $_SESSION['campaign_id']);
+            $currentlyAdmin = $this->campaignAdminModel->isAdmin($campaignUser['user_id'], $_SESSION['campaign_id']);
             if ($admin && !$currentlyAdmin) {
-                $this->campaignAdminModel->addAdmin($userId, $_SESSION['campaign_id']);
+                $this->campaignAdminModel->addAdmin($campaignUser['user_id'], $_SESSION['campaign_id']);
             } elseif (!$admin && $currentlyAdmin) {
-                $this->campaignAdminModel->removeAdmin($userId, $_SESSION['campaign_id']);
+                $this->campaignAdminModel->removeAdmin($campaignUser['user_id'], $_SESSION['campaign_id']);
             }
 
             $_SESSION['success'] = 'Utilisateur modifié avec succès';
@@ -177,9 +205,17 @@ class AdminController
 
     public function deleteUser(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {
-        $userId = (int) $request->getAttribute('id');
+        $campaignUserId = (int) $request->getAttribute('id');
+        $campaignUser = $this->campaignUserModel->findByCampaignAndUser($_SESSION['campaign_id'], $campaignUserId);
 
-        if ($userId == $_SESSION['user_id']) {
+        if (!$campaignUser) {
+            $_SESSION['error'] = 'Utilisateur non trouvé';
+            return $response
+                ->withHeader('Location', '/admin')
+                ->withStatus(302);
+        }
+
+        if ($campaignUser['user_id'] == $_SESSION['user_id']) {
             $_SESSION['error'] = 'Vous ne pouvez pas supprimer votre propre compte';
             return $response
                 ->withHeader('Location', '/admin')
@@ -187,7 +223,7 @@ class AdminController
         }
 
         try {
-            $this->userModel->delete($userId);
+            $this->campaignUserModel->delete($campaignUser['id']);
             $_SESSION['success'] = 'Utilisateur supprimé avec succès';
         } catch (\Exception $e) {
             $_SESSION['error'] = 'Échec de la suppression : ' . $e->getMessage();
@@ -246,7 +282,7 @@ class AdminController
                     ->withStatus(302);
             }
 
-            $results = $this->userModel->createBatch($_SESSION['campaign_id'], $users);
+            $results = $this->campaignUserModel->createBatch($_SESSION['campaign_id'], $users);
 
             $created = count(array_filter($results, fn($r) => $r['status'] === 'created'));
             $skipped = count(array_filter($results, fn($r) => $r['status'] === 'skipped'));
@@ -260,5 +296,62 @@ class AdminController
         return $response
             ->withHeader('Location', '/admin')
             ->withStatus(302);
+    }
+
+    public function sendEmails(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
+    {
+        $campaignId = $_SESSION['campaign_id'];
+        $campaign = $this->campaignModel->findById($campaignId);
+
+        if (!$campaign) {
+            $_SESSION['error'] = 'Spreadly non trouvé';
+            return $response
+                ->withHeader('Location', '/admin')
+                ->withStatus(302);
+        }
+
+        try {
+            $receivers = $this->campaignUserModel->findReceivers($campaignId);
+            $sentCount = 0;
+            $errorCount = 0;
+
+            foreach ($receivers as $receiver) {
+                $loves = $this->loveModel->findByReceiver($receiver['user_id']);
+
+                if (empty($loves)) {
+                    continue;
+                }
+
+                $emailService = new \App\Services\EmailService($this->getEmailConfig($campaign));
+
+                if ($emailService->sendLoveMessages($receiver, $loves, $campaign['theme'])) {
+                    $sentCount++;
+                } else {
+                    $errorCount++;
+                }
+            }
+
+            if ($sentCount > 0) {
+                $_SESSION['success'] = "$sentCount email(s) envoyé(s) avec succès" . ($errorCount > 0 ? " ($errorCount erreur(s))" : "");
+            } else {
+                $_SESSION['error'] = $errorCount > 0 ? "Échec de l'envoi des emails" : "Aucun message à envoyer";
+            }
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erreur lors de l\'envoi : ' . $e->getMessage();
+        }
+
+        return $response
+            ->withHeader('Location', '/admin')
+            ->withStatus(302);
+    }
+
+    private function getEmailConfig(array $campaign): array
+    {
+        $config = require __DIR__ . '/../../config/config.php';
+        $emailConfig = $config['email'];
+
+        $emailConfig['mail_subject'] = $campaign['mail_subject'] ?: $emailConfig['mail_subject'];
+
+        return $emailConfig;
     }
 }

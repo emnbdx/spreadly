@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Models\User;
+use App\Models\CampaignUser;
 use App\Models\Love;
 use App\Models\Campaign;
 use App\Models\CampaignAdmin;
@@ -14,15 +15,17 @@ use DateTime;
 class HomeController
 {
     private User $userModel;
+    private CampaignUser $campaignUserModel;
     private Love $loveModel;
     private Campaign $campaignModel;
     private CampaignAdmin $campaignAdminModel;
     private Twig $view;
     private array $config;
 
-    public function __construct(User $userModel, Love $loveModel, Campaign $campaignModel, CampaignAdmin $campaignAdminModel, Twig $view, array $config)
+    public function __construct(User $userModel, CampaignUser $campaignUserModel, Love $loveModel, Campaign $campaignModel, CampaignAdmin $campaignAdminModel, Twig $view, array $config)
     {
         $this->userModel = $userModel;
+        $this->campaignUserModel = $campaignUserModel;
         $this->loveModel = $loveModel;
         $this->campaignModel = $campaignModel;
         $this->campaignAdminModel = $campaignAdminModel;
@@ -32,9 +35,17 @@ class HomeController
 
     public function index(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {
+        $campaign = $this->campaignModel->findById($_SESSION['campaign_id']);
+        if (!$campaign) {
+            $_SESSION['error'] = 'Spreadly non trouvé';
+            return $response
+                ->withHeader('Location', '/login')
+                ->withStatus(302);
+        }
+
         $campaignEndDate = $this->campaignModel->getEndDate($_SESSION['campaign_id']);
         if (!$campaignEndDate) {
-            $_SESSION['error'] = 'Campagne non trouvée';
+            $_SESSION['error'] = 'Spreadly terminé';
             return $response
                 ->withHeader('Location', '/login')
                 ->withStatus(302);
@@ -46,7 +57,7 @@ class HomeController
         $receivers = [];
         $senderMessages = [];
         if (!$isEnded) {
-            $receivers = $this->userModel->findReceivers($_SESSION['campaign_id']);
+            $receivers = $this->campaignUserModel->findReceivers($_SESSION['campaign_id']);
             $senderMessages = $this->loveModel->findBySender($_SESSION['user_id']);
         }
 
@@ -61,6 +72,7 @@ class HomeController
 
         $data = [
             'user' => $user,
+            'campaign' => $campaign,
             'receivers' => $receivers,
             'is_ended' => $isEnded,
             'is_admin' => $isAdmin,
@@ -79,7 +91,7 @@ class HomeController
     {
         $campaignEndDate = $this->campaignModel->getEndDate($_SESSION['campaign_id']);
         if (!$campaignEndDate) {
-            $_SESSION['error'] = 'Campagne non trouvée';
+            $_SESSION['error'] = 'Spreadly non trouvé';
             return $response
                 ->withHeader('Location', '/')
                 ->withStatus(302);
@@ -106,7 +118,8 @@ class HomeController
         }
 
         $receiver = $this->userModel->findById($receiverId);
-        if (!$receiver || !$receiver['receiver']) {
+        $campaignUser = $this->campaignUserModel->findByCampaignAndUser($_SESSION['campaign_id'], $receiverId);
+        if (!$receiver || !$campaignUser || !$campaignUser['receiver']) {
             $_SESSION['error'] = 'Destinataire invalide';
             return $response
                 ->withHeader('Location', '/')

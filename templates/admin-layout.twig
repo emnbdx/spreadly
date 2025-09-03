@@ -20,8 +20,8 @@
             --accent-warning: #f59e0b;
             --accent-danger: #ef4444;
             --text-primary: #ffffff;
-            --text-secondary: rgba(255, 255, 255, 0.8);
-            --text-muted: rgba(255, 255, 255, 0.6);
+            --text-secondary: rgba(255, 255, 255, 0.9);
+            --text-muted: rgba(255, 255, 255, 0.7);
             --glass-bg: rgba(255, 255, 255, 0.1);
             --glass-border: rgba(255, 255, 255, 0.15);
             --shadow-dark: 0 8px 32px rgba(0, 0, 0, 0.3);
@@ -219,10 +219,11 @@
         .table {
             color: var(--text-primary);
             margin-bottom: 0;
+            background: rgba(255, 255, 255, 0.05);
         }
         
         .table th {
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.1);
             border-color: var(--glass-border);
             color: var(--text-primary);
             font-weight: 600;
@@ -233,11 +234,16 @@
         
         .table td {
             border-color: var(--glass-border);
-            color: var(--text-secondary);
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.02);
         }
         
         .table tbody tr:hover {
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .table tbody tr:hover td {
+            background: rgba(255, 255, 255, 0.1);
         }
         
         .badge {
@@ -357,7 +363,7 @@
         }
         
         .stat-label {
-            color: var(--text-muted);
+            color: var(--text-secondary);
             font-size: 0.875rem;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -377,6 +383,19 @@
                 grid-template-columns: 1fr;
                 gap: 1rem;
             }
+        }
+        
+        .form-text {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+        
+        .text-muted {
+            color: var(--text-muted) !important;
+        }
+        
+        small {
+            color: var(--text-secondary);
         }
         
         {% block extra_styles %}{% endblock %}

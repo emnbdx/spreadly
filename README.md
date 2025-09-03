@@ -89,15 +89,16 @@ Set these environment variables in your system or web server:
 
 ```bash
 export DbUrl="localhost"
+export DbPort="3306"
 export DbName="spreadly"
-export DbUser="your_db_user"
-export DbPassword="your_db_password"
+export DbUser="root"
+export DbPassword=""
+export DbPrefix=""
 
-# For email functionality (optional in development)
-export MailjetPublicKey="your_mailjet_public_key"
-export MailjetPrivateKey="your_mailjet_private_key"
-export MailFromEmail="noreply@yourdomain.com"
-export MailFromName="Spreadly"
+# Configuration Brevo
+export BrevoApiKey="your_brevo_api_key"
+export MailFromEmail="your_email@domain.com"
+export MailFromName="Your Name"
 ```
 
 #### Option B: .env File
@@ -110,7 +111,7 @@ cp env.example .env
 
 ### 5. Development Mode
 
-If you don't configure Mailjet, the app runs in **development mode**:
+If you don't configure Brevo, the app runs in **development mode**:
 - ✅ Login codes are logged to error log
 - ✅ Login codes are displayed on screen
 - ✅ No emails are actually sent
@@ -235,9 +236,7 @@ All settings centralized in `config/config.php`
 ### Production Setup
 
 For production:
-1. Configure Mailjet API keys
-2. Set up your email template in Mailjet
-3. Update `EndDate` in configuration
+1. Configure Brevo API keys
 4. Deploy to your web server
 5. Ensure at least one admin user exists
 
