@@ -54,9 +54,9 @@
                         <select id="to" name="to" class="form-control" required onchange="loadExistingMessage()">
                             <option value="">Choisissez un destinataire...</option>
                             {% for receiver in receivers %}
-                                <option value="{{ receiver.id }}" data-has-message="{{ messages_by_receiver[receiver.id] ? 'true' : 'false' }}">
+                                <option value="{{ receiver.user_id }}" data-has-message="{{ messages_by_receiver[receiver.user_id] ? 'true' : 'false' }}">
                                     {{ receiver.name }}
-                                    {% if messages_by_receiver[receiver.id] %}
+                                    {% if messages_by_receiver[receiver.user_id] %}
                                         ✉️ (message envoyé)
                                     {% endif %}
                                 </option>

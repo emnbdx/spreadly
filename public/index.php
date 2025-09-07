@@ -130,6 +130,9 @@ $container->set(OnboardingController::class, function (Container $c) {
 AppFactory::setContainer($container);
 $app = AppFactory::create();
 
+// Configuration pour afficher les erreurs Slim
+$app->addErrorMiddleware(false, false, false);
+
 // Add middleware in reverse order (last added = first executed)
 $app->add(TwigMiddleware::createFromContainer($app, Twig::class));
 $app->add(SessionMiddleware::class);
@@ -171,6 +174,7 @@ $app->group('', function ($group) {
     $group->post('/admin/delete/{id:[0-9]+}', [AdminController::class, 'deleteUser']);
     $group->post('/admin/import', [AdminController::class, 'importUsers']);
     $group->post('/admin/send', [AdminController::class, 'sendEmails']);
+    $group->get('/admin/print', [AdminController::class, 'printEmail']);
 })->add(CampaignMiddleware::class)->add(function ($request, $handler) use ($container) {
     $adminMiddleware = new AdminMiddleware($container->get(CampaignAdmin::class));
     return $adminMiddleware->process($request, $handler);

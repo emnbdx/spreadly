@@ -76,7 +76,7 @@ class EmailService
         }
     }
 
-    private function generateEmailContent(array $loves, string $theme): string
+    public function generateEmailContent(array $loves, string $theme): string
     {
         $themeConfig = $this->getThemeConfig($theme);
 
@@ -104,7 +104,7 @@ class EmailService
         return $content;
     }
 
-    private function getThemeConfig(string $theme): array
+    public function getThemeConfig(string $theme): array
     {
         $themes = [
             'christmas' => [
@@ -116,26 +116,6 @@ class EmailService
                 'message_bg' => '#f8f9fa',
                 'footer_bg' => '#d32f2f',
                 'footer_text' => 'Joyeux Noël ! 🎅'
-            ],
-            'valentine' => [
-                'title' => '💕 Messages d\'amour',
-                'primary_color' => '#e91e63',
-                'accent_color' => '#f50057',
-                'text_color' => '#333333',
-                'quote_color' => '#e91e63',
-                'message_bg' => '#fff5f8',
-                'footer_bg' => '#e91e63',
-                'footer_text' => 'Avec tout mon amour 💕'
-            ],
-            'birthday' => [
-                'title' => '🎂 Messages d\'anniversaire',
-                'primary_color' => '#ff9800',
-                'accent_color' => '#ff5722',
-                'text_color' => '#333333',
-                'quote_color' => '#ff9800',
-                'message_bg' => '#fff8e1',
-                'footer_bg' => '#ff9800',
-                'footer_text' => 'Joyeux anniversaire ! 🎉'
             ],
             'nature' => [
                 'title' => '🌿 Messages nature',

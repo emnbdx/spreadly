@@ -345,6 +345,54 @@ class AdminController
             ->withStatus(302);
     }
 
+    public function printEmail(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
+    {
+        $campaignId = $_SESSION['campaign_id'];
+        $campaign = $this->campaignModel->findById($campaignId);
+
+        if (!$campaign) {
+            $_SESSION['error'] = 'Spreadly non trouvé';
+            return $response
+                ->withHeader('Location', '/admin')
+                ->withStatus(302);
+        }
+
+        try {
+            $receivers = $this->campaignUserModel->findReceivers($campaignId);
+
+            if (empty($receivers)) {
+                $_SESSION['error'] = 'Aucun destinataire trouvé';
+                return $response
+                    ->withHeader('Location', '/admin')
+                    ->withStatus(302);
+            }
+
+            $firstReceiver = $receivers[0];
+            $loves = $this->loveModel->findByReceiver($firstReceiver['user_id']);
+
+            if (empty($loves)) {
+                $_SESSION['error'] = 'Aucun message trouvé pour la prévisualisation';
+                return $response
+                    ->withHeader('Location', '/admin')
+                    ->withStatus(302);
+            }
+
+            $emailService = new \App\Services\EmailService($this->getEmailConfig($campaign));
+            $htmlContent = $emailService->generateEmailContent(array_reverse($loves), $campaign['theme']);
+
+            $data = [
+                'html_content' => $htmlContent
+            ];
+
+            return $this->view->render($response, 'admin-print.twig', $data);
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erreur lors de la génération de la prévisualisation : ' . $e->getMessage();
+            return $response
+                ->withHeader('Location', '/admin')
+                ->withStatus(302);
+        }
+    }
+
     private function getEmailConfig(array $campaign): array
     {
         $config = require __DIR__ . '/../../config/config.php';
