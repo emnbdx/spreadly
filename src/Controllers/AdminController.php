@@ -119,9 +119,9 @@ class AdminController
     public function editUser(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {
         $campaignUserId = (int) $request->getAttribute('id');
-        $campaignUser = $this->campaignUserModel->findByCampaignAndUser($_SESSION['campaign_id'], $campaignUserId);
+        $campaignUser = $this->campaignUserModel->findById($campaignUserId);
 
-        if (!$campaignUser) {
+        if (!$campaignUser || $campaignUser['campaign_id'] != $_SESSION['campaign_id']) {
             $_SESSION['error'] = 'Utilisateur non trouvé';
             return $response
                 ->withHeader('Location', '/admin')
@@ -165,8 +165,8 @@ class AdminController
                 ->withStatus(302);
         }
 
-        $campaignUser = $this->campaignUserModel->findByCampaignAndUser($_SESSION['campaign_id'], $campaignUserId);
-        if (!$campaignUser) {
+        $campaignUser = $this->campaignUserModel->findById($campaignUserId);
+        if (!$campaignUser || $campaignUser['campaign_id'] != $_SESSION['campaign_id']) {
             $_SESSION['error'] = 'Utilisateur non trouvé';
             return $response
                 ->withHeader('Location', '/admin')
@@ -206,9 +206,9 @@ class AdminController
     public function deleteUser(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {
         $campaignUserId = (int) $request->getAttribute('id');
-        $campaignUser = $this->campaignUserModel->findByCampaignAndUser($_SESSION['campaign_id'], $campaignUserId);
+        $campaignUser = $this->campaignUserModel->findById($campaignUserId);
 
-        if (!$campaignUser) {
+        if (!$campaignUser || $campaignUser['campaign_id'] != $_SESSION['campaign_id']) {
             $_SESSION['error'] = 'Utilisateur non trouvé';
             return $response
                 ->withHeader('Location', '/admin')
@@ -271,7 +271,8 @@ class AdminController
                 $users[] = [
                     'name' => trim($data[0] ?? ''),
                     'email' => trim($data[1] ?? ''),
-                    'receiver' => isset($data[2]) ? filter_var($data[2], FILTER_VALIDATE_BOOLEAN) : true
+                    'receiver' => isset($data[2]) ? filter_var($data[2], FILTER_VALIDATE_BOOLEAN) : true,
+                    'admin' => isset($data[3]) ? filter_var($data[3], FILTER_VALIDATE_BOOLEAN) : false
                 ];
             }
 
@@ -283,6 +284,15 @@ class AdminController
             }
 
             $results = $this->campaignUserModel->createBatch($_SESSION['campaign_id'], $users);
+
+            foreach ($results as $index => $result) {
+                if ($result['status'] === 'created' && !empty($users[$index]['admin']) && $users[$index]['admin']) {
+                    $userRecord = $this->userModel->findByEmail($users[$index]['email']);
+                    if ($userRecord) {
+                        $this->campaignAdminModel->addAdmin($userRecord['id'], $_SESSION['campaign_id']);
+                    }
+                }
+            }
 
             $created = count(array_filter($results, fn($r) => $r['status'] === 'created'));
             $skipped = count(array_filter($results, fn($r) => $r['status'] === 'skipped'));
@@ -316,7 +326,7 @@ class AdminController
             $errorCount = 0;
 
             foreach ($receivers as $receiver) {
-                $loves = $this->loveModel->findByReceiver($receiver['user_id']);
+                $loves = $this->loveModel->findByReceiver($receiver['user_id'], $campaignId);
 
                 if (empty($loves)) {
                     continue;
@@ -358,24 +368,19 @@ class AdminController
         }
 
         try {
-            $receivers = $this->campaignUserModel->findReceivers($campaignId);
+            $allLoves = $this->loveModel->findByCampaign($campaignId);
 
-            if (empty($receivers)) {
-                $_SESSION['error'] = 'Aucun destinataire trouvé';
-                return $response
-                    ->withHeader('Location', '/admin')
-                    ->withStatus(302);
-            }
-
-            $firstReceiver = $receivers[0];
-            $loves = $this->loveModel->findByReceiver($firstReceiver['user_id']);
-
-            if (empty($loves)) {
+            if (empty($allLoves)) {
                 $_SESSION['error'] = 'Aucun message trouvé pour la prévisualisation';
                 return $response
                     ->withHeader('Location', '/admin')
                     ->withStatus(302);
             }
+
+            $firstReceiverId = $allLoves[0]['id_receiver'];
+            $loves = array_filter($allLoves, function ($love) use ($firstReceiverId) {
+                return $love['id_receiver'] == $firstReceiverId;
+            });
 
             $emailService = new \App\Services\EmailService($this->getEmailConfig($campaign));
             $htmlContent = $emailService->generateEmailContent(array_reverse($loves), $campaign['theme']);
@@ -391,6 +396,39 @@ class AdminController
                 ->withHeader('Location', '/admin')
                 ->withStatus(302);
         }
+    }
+
+    public function stats(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
+    {
+        $campaignId = $_SESSION['campaign_id'];
+        $campaign = $this->campaignModel->findById($campaignId);
+        $currentUser = $this->userModel->findById($_SESSION['user_id']);
+
+        if (!$campaign) {
+            $_SESSION['error'] = 'Spreadly non trouvé';
+            return $response
+                ->withHeader('Location', '/admin')
+                ->withStatus(302);
+        }
+
+        $totalMessages = $this->loveModel->getTotalMessagesByCampaign($campaignId);
+        $messagesByDay = $this->loveModel->getMessagesByDay($campaignId);
+        $topSenders = $this->loveModel->getTopSenders($campaignId, 1);
+        $topReceivers = $this->loveModel->getTopReceivers($campaignId, 1);
+
+        $topContribCount = !empty($topSenders) ? $topSenders[0]['message_count'] : 0;
+        $topReceiverCount = !empty($topReceivers) ? $topReceivers[0]['message_count'] : 0;
+
+        $data = [
+            'campaign' => $campaign,
+            'current_user' => $currentUser,
+            'total_messages' => $totalMessages,
+            'messages_by_day' => $messagesByDay,
+            'top_contrib_count' => $topContribCount,
+            'top_receiver_count' => $topReceiverCount
+        ];
+
+        return $this->view->render($response, 'admin-stats.twig', $data);
     }
 
     private function getEmailConfig(array $campaign): array

@@ -131,12 +131,13 @@ AppFactory::setContainer($container);
 $app = AppFactory::create();
 
 // Configuration pour afficher les erreurs Slim
-$app->addErrorMiddleware(false, false, false);
+$app->addErrorMiddleware(true, false, false);
 
 // Add middleware in reverse order (last added = first executed)
 $app->add(TwigMiddleware::createFromContainer($app, Twig::class));
 $app->add(SessionMiddleware::class);
 
+$app->get('/', [AuthController::class, 'showLogin']);
 $app->get('/login', [AuthController::class, 'showLogin']);
 $app->get('/create-spreadly', [OnboardingController::class, 'showCreate']);
 $app->post('/auth/request', [AuthController::class, 'requestCode']);
@@ -160,7 +161,7 @@ $app->get('/campaigns/{slug}', [CampaignController::class, 'publicAccess']);
 
 // Routes qui nécessitent une Spreadly sélectionnée
 $app->group('', function ($group) {
-    $group->get('/', [HomeController::class, 'index']);
+    $group->get('/home', [HomeController::class, 'index']);
     $group->post('/send', [HomeController::class, 'sendLove']);
     $group->post('/message/delete/{id:[0-9]+}', [HomeController::class, 'deleteMessage']);
 })->add(CampaignMiddleware::class)->add(AuthMiddleware::class);
@@ -168,6 +169,7 @@ $app->group('', function ($group) {
 // Routes admin qui nécessitent une Spreadly sélectionnée
 $app->group('', function ($group) {
     $group->get('/admin', [AdminController::class, 'index']);
+    $group->get('/admin/stats', [AdminController::class, 'stats']);
     $group->post('/admin/create', [AdminController::class, 'createUser']);
     $group->get('/admin/edit/{id:[0-9]+}', [AdminController::class, 'editUser']);
     $group->post('/admin/edit/{id:[0-9]+}', [AdminController::class, 'updateUser']);

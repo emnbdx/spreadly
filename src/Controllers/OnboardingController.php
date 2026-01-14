@@ -151,7 +151,7 @@ class OnboardingController
                 $_SESSION['campaign_slug'] = $slug;
 
                 $_SESSION['success'] = 'Votre nouveau Spreadly a été créé avec succès !';
-                return $response->withHeader('Location', '/')->withStatus(302);
+                return $response->withHeader('Location', '/home')->withStatus(302);
             } else {
                 // Nouvel utilisateur : créer le compte et envoyer le code
                 $userId = $this->userModel->create($userName, $userEmail);

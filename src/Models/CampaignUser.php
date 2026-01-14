@@ -26,6 +26,20 @@ class CampaignUser
         return $this->db->lastInsertId();
     }
 
+    public function findById(int $id): ?array
+    {
+        $stmt = $this->db->prepare("
+            SELECT cu.*, u.name, u.email, c.name as campaign_name, c.slug as campaign_slug
+            FROM {$this->tablePrefix}campaign_user cu
+            JOIN {$this->tablePrefix}user u ON cu.user_id = u.id
+            JOIN {$this->tablePrefix}campaign c ON cu.campaign_id = c.id
+            WHERE cu.id = ?
+        ");
+        $stmt->execute([$id]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result ?: null;
+    }
+
     public function findByCampaignAndUser(int $campaignId, int $userId): ?array
     {
         $stmt = $this->db->prepare("

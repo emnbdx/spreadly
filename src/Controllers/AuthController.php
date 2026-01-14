@@ -27,8 +27,13 @@ class AuthController
     public function showLogin(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {
         if (isset($_SESSION['user_id'])) {
+            if (isset($_SESSION['campaign_id'])) {
+                return $response
+                    ->withHeader('Location', '/home')
+                    ->withStatus(302);
+            }
             return $response
-                ->withHeader('Location', '/')
+                ->withHeader('Location', '/campaigns')
                 ->withStatus(302);
         }
 
@@ -38,10 +43,9 @@ class AuthController
             'email' => $_SESSION['login_email'] ?? null
         ];
 
-        // Clean up session variables after reading them
         unset($_SESSION['error'], $_SESSION['info']);
 
-        return $this->view->render($response, 'login.twig', $data);
+        return $this->view->render($response, 'landing.twig', $data);
     }
 
     public function requestCode(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
@@ -53,7 +57,7 @@ class AuthController
             unset($_SESSION['success'], $_SESSION['code_sent'], $_SESSION['login_email']);
             $_SESSION['error'] = 'L\'email est requis';
             return $response
-                ->withHeader('Location', '/login')
+                ->withHeader('Location', '/')
                 ->withStatus(302);
         }
 
@@ -79,7 +83,7 @@ class AuthController
         }
 
         return $response
-            ->withHeader('Location', '/login')
+            ->withHeader('Location', '/')
             ->withStatus(302);
     }
 
@@ -93,7 +97,7 @@ class AuthController
             unset($_SESSION['success'], $_SESSION['code_sent'], $_SESSION['login_email']);
             $_SESSION['error'] = 'L\'email et le code sont requis';
             return $response
-                ->withHeader('Location', '/login')
+                ->withHeader('Location', '/')
                 ->withStatus(302);
         }
 
@@ -125,7 +129,7 @@ class AuthController
 
                     $_SESSION['success'] = "Bienvenue sur le Spreadly : {$targetCampaignName}";
                     return $response
-                        ->withHeader('Location', '/')
+                        ->withHeader('Location', '/home')
                         ->withStatus(302);
                 } else {
                     // L'utilisateur n'a pas accès à la Spreadly cible
@@ -153,7 +157,7 @@ class AuthController
                 unset($_SESSION['error'], $_SESSION['code_sent'], $_SESSION['login_email']);
 
                 return $response
-                    ->withHeader('Location', '/')
+                    ->withHeader('Location', '/home')
                     ->withStatus(302);
             } elseif (count($userCampaigns) > 1) {
                 // L'utilisateur a plusieurs Spreadlys, stocker les infos de base et rediriger vers la sélection
@@ -184,7 +188,7 @@ class AuthController
         unset($_SESSION['success'], $_SESSION['code_sent'], $_SESSION['login_email']);
         $_SESSION['error'] = 'Code invalide ou expiré';
         return $response
-            ->withHeader('Location', '/login')
+            ->withHeader('Location', '/')
             ->withStatus(302);
     }
 
@@ -193,7 +197,7 @@ class AuthController
         session_destroy();
 
         return $response
-            ->withHeader('Location', '/login')
+            ->withHeader('Location', '/')
             ->withStatus(302);
     }
 }

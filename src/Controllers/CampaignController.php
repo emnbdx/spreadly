@@ -127,7 +127,7 @@ class CampaignController
         }
 
         return $response
-            ->withHeader('Location', '/')
+            ->withHeader('Location', '/campaigns')
             ->withStatus(302);
     }
 
@@ -303,7 +303,7 @@ class CampaignController
         $_SESSION['success'] = "Vous êtes maintenant sur le Spreadly : {$campaign['name']}";
 
         return $response
-            ->withHeader('Location', '/')
+            ->withHeader('Location', '/home')
             ->withStatus(302);
     }
 
@@ -344,7 +344,7 @@ class CampaignController
 
                 $_SESSION['success'] = "Bienvenue sur le Spreadly : {$campaign['name']}";
                 return $response
-                    ->withHeader('Location', '/')
+                    ->withHeader('Location', '/home')
                     ->withStatus(302);
             } else {
                 // L'utilisateur connecté n'a pas accès à cette Spreadly

@@ -1,0 +1,196 @@
+{% extends "admin-layout.twig" %}
+
+{% block title %}Statistiques - Spreadly{% endblock %}
+
+{% block font_size %}16px{% endblock %}
+
+{% block extra_styles %}
+.chart-container {
+    position: relative;
+    height: 400px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 20px;
+}
+
+.big-stat {
+    font-size: 3rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-align: center;
+    margin-bottom: 0.5rem;
+}
+
+.big-stat-label {
+    color: var(--text-secondary);
+    font-size: 1.2rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-align: center;
+}
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="section-title">
+        <i class="fas fa-chart-bar me-2"></i>Statistiques du Spreadly
+    </h1>
+    <div class="d-flex align-items-center gap-2">
+        <span class="text-muted me-2">
+            <i class="fas fa-flag me-1"></i>{{ campaign.name }}
+        </span>
+        <span class="text-muted me-3">
+            <i class="fas fa-user-shield me-1"></i>{{ current_user.name }}
+        </span>
+        <a href="/admin" class="btn btn-outline-light btn-sm">
+            <i class="fas fa-arrow-left me-1"></i>Retour Admin
+        </a>
+        <a href="/campaigns" class="btn btn-outline-light btn-sm">
+            <i class="fas fa-list me-1"></i>Mes Spreadly
+        </a>
+        <a href="/home" class="btn btn-primary btn-sm">
+            <i class="fas fa-home me-1"></i>Accueil
+        </a>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4 mb-3">
+        <div class="glass-card">
+            <div class="card-body text-center py-4">
+                <div class="big-stat">{{ total_messages }}</div>
+                <div class="big-stat-label">
+                    <i class="fas fa-comment-dots me-2"></i>Messages Totaux
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="glass-card">
+            <div class="card-body text-center py-4">
+                <div class="big-stat">{{ top_contrib_count }}</div>
+                <div class="big-stat-label">
+                    <i class="fas fa-trophy me-2"></i>Top Contrib
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="glass-card">
+            <div class="card-body text-center py-4">
+                <div class="big-stat">{{ top_receiver_count }}</div>
+                <div class="big-stat-label">
+                    <i class="fas fa-inbox me-2"></i>Top Receveur
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="glass-card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-line me-2"></i>Messages par jour
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="messagesChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+<script>
+    const ctx = document.getElementById('messagesChart');
+    
+    const messagesByDay = {{ messages_by_day|json_encode|raw }};
+    
+    const labels = messagesByDay.map(item => {
+        const date = new Date(item.date);
+        return date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+    });
+    
+    const data = messagesByDay.map(item => item.count);
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Messages par jour',
+                data: data,
+                borderColor: 'rgba(79, 172, 254, 1)',
+                backgroundColor: 'rgba(79, 172, 254, 0.2)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 6,
+                pointHoverRadius: 8,
+                pointBackgroundColor: 'rgba(79, 172, 254, 1)',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(26, 26, 46, 0.95)',
+                    titleColor: '#fff',
+                    bodyColor: '#fff',
+                    borderColor: 'rgba(79, 172, 254, 0.5)',
+                    borderWidth: 1,
+                    padding: 12,
+                    displayColors: false,
+                    callbacks: {
+                        label: function(context) {
+                            return context.parsed.y + ' message(s)';
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        color: 'rgba(255, 255, 255, 0.7)',
+                        stepSize: 1
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)',
+                        borderColor: 'rgba(255, 255, 255, 0.2)'
+                    }
+                },
+                x: {
+                    ticks: {
+                        color: 'rgba(255, 255, 255, 0.7)'
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)',
+                        borderColor: 'rgba(255, 255, 255, 0.2)'
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}
+
+
+
+

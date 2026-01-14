@@ -119,13 +119,13 @@
         <a href="/campaigns" class="btn btn-glass me-2">
             <i class="fas fa-list me-2"></i>Mes Spreadly
         </a>
-        <a href="/" class="btn btn-outline-glass">
+        <a href="{% if is_logged_in %}/campaigns{% else %}/{% endif %}" class="btn btn-outline-glass">
             <i class="fas fa-home me-2"></i>Retour à l'accueil
         </a>
     {% else %}
-        <p class="text-white-50 mb-3">Déjà un compte ?</p>
-        <a href="/login" class="btn btn-outline-glass">
-            <i class="fas fa-sign-in-alt me-2"></i>Se connecter
+        <p class="text-white-50 mb-2" style="font-size: 0.95rem;">Déjà un compte ?</p>
+        <a href="/?login=1" style="color: rgba(255, 255, 255, 0.9); text-decoration: underline; font-size: 0.95rem;">
+            <i class="fas fa-sign-in-alt me-1"></i>Se connecter
         </a>
     {% endif %}
 </div>

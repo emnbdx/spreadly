@@ -58,7 +58,7 @@ class HomeController
         $senderMessages = [];
         if (!$isEnded) {
             $receivers = $this->campaignUserModel->findReceivers($_SESSION['campaign_id']);
-            $senderMessages = $this->loveModel->findBySender($_SESSION['user_id']);
+            $senderMessages = $this->loveModel->findBySender($_SESSION['user_id'], $_SESSION['campaign_id']);
         }
 
         $user = $this->userModel->findById($_SESSION['user_id']);
@@ -93,7 +93,7 @@ class HomeController
         if (!$campaignEndDate) {
             $_SESSION['error'] = 'Spreadly non trouvé';
             return $response
-                ->withHeader('Location', '/')
+                ->withHeader('Location', '/home')
                 ->withStatus(302);
         }
 
@@ -101,7 +101,7 @@ class HomeController
         if ($endDate < new DateTime('NOW')) {
             $_SESSION['error'] = 'La période de soumission est terminée';
             return $response
-                ->withHeader('Location', '/')
+                ->withHeader('Location', '/home')
                 ->withStatus(302);
         }
 
@@ -113,7 +113,7 @@ class HomeController
         if (empty($receiverId) || empty($message)) {
             $_SESSION['error'] = 'Tous les champs sont requis';
             return $response
-                ->withHeader('Location', '/')
+                ->withHeader('Location', '/home')
                 ->withStatus(302);
         }
 
@@ -122,7 +122,7 @@ class HomeController
         if (!$receiver || !$campaignUser || !$campaignUser['receiver']) {
             $_SESSION['error'] = 'Destinataire invalide';
             return $response
-                ->withHeader('Location', '/')
+                ->withHeader('Location', '/home')
                 ->withStatus(302);
         }
 
@@ -132,7 +132,7 @@ class HomeController
         try {
             if ($messageId > 0) {
                 // Modification d'un message existant
-                $existingMessage = $this->loveModel->findByReceiverAndSender($receiverId, $senderId);
+                $existingMessage = $this->loveModel->findByReceiverAndSender($receiverId, $senderId, $_SESSION['campaign_id']);
                 if ($existingMessage && $existingMessage['id'] == $messageId) {
                     $this->loveModel->update($messageId, $message);
                     unset($_SESSION['error']);
@@ -142,7 +142,7 @@ class HomeController
                 }
             } else {
                 // Vérifier s'il existe déjà un message pour ce destinataire
-                $existingMessage = $this->loveModel->findByReceiverAndSender($receiverId, $senderId);
+                $existingMessage = $this->loveModel->findByReceiverAndSender($receiverId, $senderId, $_SESSION['campaign_id']);
                 if ($existingMessage) {
                     $_SESSION['error'] = 'Vous avez déjà envoyé un message à cette personne';
                 } else {
@@ -157,7 +157,7 @@ class HomeController
         }
 
         return $response
-            ->withHeader('Location', '/')
+            ->withHeader('Location', '/home')
             ->withStatus(302);
     }
 
@@ -167,7 +167,7 @@ class HomeController
 
         try {
             // Vérifier que le message appartient bien à l'utilisateur connecté
-            $senderMessages = $this->loveModel->findBySender($_SESSION['user_id']);
+            $senderMessages = $this->loveModel->findBySender($_SESSION['user_id'], $_SESSION['campaign_id']);
             $messageExists = false;
             foreach ($senderMessages as $msg) {
                 if ($msg['id'] == $messageId) {
@@ -187,7 +187,7 @@ class HomeController
         }
 
         return $response
-            ->withHeader('Location', '/')
+            ->withHeader('Location', '/home')
             ->withStatus(302);
     }
 }
