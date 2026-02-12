@@ -28,7 +28,7 @@ class DonateController
 
         $priceData = [
             'unit_amount' => $amount * 100,
-            'currency' => $this->config['currency'],
+            'currency' => "eur",
             'product_data' => ['name' => $isMonthly ? 'Don mensuel Spreadly' : 'Don Spreadly'],
         ];
 
