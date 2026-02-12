@@ -138,7 +138,7 @@ AppFactory::setContainer($container);
 $app = AppFactory::create();
 
 // Configuration pour afficher les erreurs Slim
-$app->addErrorMiddleware(true, false, false);
+$app->addErrorMiddleware(false, false, false);
 
 // Add middleware in reverse order (last added = first executed)
 $app->add(TwigMiddleware::createFromContainer($app, Twig::class));
