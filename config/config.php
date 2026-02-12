@@ -25,5 +25,10 @@ return [
     'app' => [
         'end_date' => $_SERVER['EndDate'] ?? '2024-12-31 23:59:59',
         'theme' => $_SERVER['Theme'] ?? 'christmas',
-    ]
+    ],
+
+    'stripe' => [
+        'secret_key' => $_SERVER['StripeSecretKey'] ?? '',
+        'publishable_key' => $_SERVER['StripePublishableKey'] ?? '',
+    ],
 ];

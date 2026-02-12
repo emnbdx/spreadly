@@ -5,6 +5,7 @@ use App\Controllers\HomeController;
 use App\Controllers\AdminController;
 use App\Controllers\CampaignController;
 use App\Controllers\OnboardingController;
+use App\Controllers\DonateController;
 use App\Middleware\AuthMiddleware;
 use App\Middleware\AdminMiddleware;
 use App\Middleware\CampaignMiddleware;
@@ -68,8 +69,10 @@ $container->set(EmailService::class, function () use ($config) {
     return new EmailService($config['email']);
 });
 
-$container->set(Twig::class, function () {
-    return Twig::create(__DIR__ . '/../templates');
+$container->set(Twig::class, function () use ($config) {
+    $twig = Twig::create(__DIR__ . '/../templates');
+    $twig->getEnvironment()->addGlobal('stripe_publishable_key', $config['stripe']['publishable_key']);
+    return $twig;
 });
 
 $container->set(AuthController::class, function (Container $c) {
@@ -127,6 +130,10 @@ $container->set(OnboardingController::class, function (Container $c) {
     );
 });
 
+$container->set(DonateController::class, function () use ($config) {
+    return new DonateController($config['stripe']);
+});
+
 AppFactory::setContainer($container);
 $app = AppFactory::create();
 
@@ -158,6 +165,9 @@ $app->group('', function ($group) {
 
 // Route publique pour accès aux Spreadly (APRÈS les routes statiques)
 $app->get('/campaigns/{slug}', [CampaignController::class, 'publicAccess']);
+
+// Stripe donation checkout
+$app->post('/donate/checkout', [DonateController::class, 'checkout']);
 
 // Routes qui nécessitent une Spreadly sélectionnée
 $app->group('', function ($group) {

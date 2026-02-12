@@ -1,0 +1,244 @@
+<style>
+    .donate-fab {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        z-index: 9999;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        border: none;
+        color: white;
+        font-size: 1.5rem;
+        cursor: pointer;
+        box-shadow: 0 6px 20px rgba(240, 147, 251, 0.5);
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .donate-fab:hover {
+        transform: translateY(-4px) scale(1.1);
+        box-shadow: 0 10px 30px rgba(240, 147, 251, 0.6);
+    }
+    .donate-fab .pulse-ring {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        border: 3px solid rgba(240, 147, 251, 0.6);
+        animation: donate-pulse 2s ease-out infinite;
+        pointer-events: none;
+    }
+    @keyframes donate-pulse {
+        0% { transform: scale(1); opacity: 1; }
+        100% { transform: scale(1.6); opacity: 0; }
+    }
+    .donate-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 10000;
+        background: rgba(0,0,0,0.5);
+        backdrop-filter: blur(4px);
+        align-items: center;
+        justify-content: center;
+    }
+    .donate-overlay.active {
+        display: flex;
+    }
+    .donate-box {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 24px;
+        border: 1px solid rgba(255,255,255,0.2);
+        padding: 36px 32px 32px;
+        max-width: 400px;
+        width: 90%;
+        color: white;
+        box-shadow: 0 25px 60px rgba(0,0,0,0.4);
+        position: relative;
+        text-align: center;
+        font-family: 'Inter', sans-serif;
+    }
+    .donate-close {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+        background: rgba(255,255,255,0.2);
+        border: none;
+        color: white;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        font-size: 1rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s;
+    }
+    .donate-close:hover {
+        background: rgba(255,255,255,0.35);
+    }
+    .donate-box h3 {
+        font-size: 1.4rem;
+        font-weight: 800;
+        margin-bottom: 6px;
+    }
+    .donate-box .donate-subtitle {
+        color: rgba(255,255,255,0.8);
+        font-size: 0.9rem;
+        margin-bottom: 24px;
+        line-height: 1.5;
+    }
+    .donate-amount-display {
+        font-size: 3rem;
+        font-weight: 900;
+        margin-bottom: 4px;
+        line-height: 1;
+    }
+    .donate-amount-label {
+        font-size: 0.8rem;
+        color: rgba(255,255,255,0.55);
+        margin-bottom: 18px;
+    }
+    .donate-slider-wrap {
+        padding: 0 4px;
+        margin-bottom: 28px;
+    }
+    .donate-slider {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        height: 6px;
+        border-radius: 3px;
+        background: rgba(255,255,255,0.25);
+        outline: none;
+        cursor: pointer;
+    }
+    .donate-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: white;
+        cursor: pointer;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+        transition: transform 0.15s;
+    }
+    .donate-slider::-webkit-slider-thumb:hover {
+        transform: scale(1.15);
+    }
+    .donate-slider::-moz-range-thumb {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: white;
+        cursor: pointer;
+        border: none;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+    }
+    .donate-slider-range {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.75rem;
+        color: rgba(255,255,255,0.5);
+        margin-top: 6px;
+    }
+    .donate-buttons {
+        display: flex;
+        gap: 10px;
+    }
+    .donate-buttons form {
+        flex: 1;
+    }
+    .donate-btn {
+        display: block;
+        width: 100%;
+        padding: 14px 12px;
+        border: none;
+        border-radius: 14px;
+        font-family: 'Inter', sans-serif;
+        font-weight: 700;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-transform: none;
+        letter-spacing: 0;
+    }
+    .donate-btn-once {
+        background: white;
+        color: #764ba2;
+    }
+    .donate-btn-once:hover {
+        background: #f3f0ff;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(255,255,255,0.3);
+    }
+    .donate-btn-monthly {
+        background: rgba(255,255,255,0.2);
+        color: white;
+        border: 2px solid rgba(255,255,255,0.4);
+    }
+    .donate-btn-monthly:hover {
+        background: rgba(255,255,255,0.3);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(255,255,255,0.15);
+    }
+    @media (max-width: 480px) {
+        .donate-fab {
+            bottom: 18px;
+            right: 18px;
+            width: 52px;
+            height: 52px;
+            font-size: 1.3rem;
+        }
+        .donate-box {
+            padding: 28px 24px 24px;
+        }
+        .donate-amount-display {
+            font-size: 2.4rem;
+        }
+    }
+</style>
+
+<button class="donate-fab" onclick="document.getElementById('donateOverlay').classList.add('active')" aria-label="Faire un don">
+    <span class="pulse-ring"></span>
+    <i class="fas fa-heart"></i>
+</button>
+
+<div class="donate-overlay" id="donateOverlay" onclick="if(event.target===this)this.classList.remove('active')">
+    <div class="donate-box">
+        <button class="donate-close" onclick="document.getElementById('donateOverlay').classList.remove('active')">
+            <i class="fas fa-times"></i>
+        </button>
+        <div style="font-size: 2.2rem; margin-bottom: 6px;">💝</div>
+        <h3>Soutenez Spreadly</h3>
+        <p class="donate-subtitle">Spreadly est gratuit. Un petit don m'aide à le maintenir !</p>
+        <div class="donate-amount-display" id="donateAmountDisplay">5€</div>
+        <div class="donate-amount-label">Choisissez votre montant</div>
+        <div class="donate-slider-wrap">
+            <input type="range" class="donate-slider" id="donateSlider" min="1" max="100" value="5"
+                   oninput="document.getElementById('donateAmountDisplay').textContent=this.value+'€';document.getElementById('donateAmountOnce').value=this.value;document.getElementById('donateAmountMonthly').value=this.value">
+            <div class="donate-slider-range"><span>1€</span><span>100€</span></div>
+        </div>
+        <div class="donate-buttons">
+            <form method="POST" action="/donate/checkout">
+                <input type="hidden" name="mode" value="once">
+                <input type="hidden" name="amount" value="5" id="donateAmountOnce">
+                <button type="submit" class="donate-btn donate-btn-once">
+                    <i class="fas fa-hand-holding-heart me-1"></i>Ponctuel
+                </button>
+            </form>
+            <form method="POST" action="/donate/checkout">
+                <input type="hidden" name="mode" value="monthly">
+                <input type="hidden" name="amount" value="5" id="donateAmountMonthly">
+                <button type="submit" class="donate-btn donate-btn-monthly">
+                    <i class="fas fa-sync-alt me-1"></i>Mensuel
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
