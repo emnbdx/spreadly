@@ -2,6 +2,9 @@
 
 namespace App\Services;
 
+use Postal\Client;
+use Postal\Send\Message;
+
 class EmailService
 {
     private array $config;
@@ -47,54 +50,24 @@ class EmailService
             return false;
         }
 
-        $payload = [
-            'to' => [$to],
-            'from' => $this->formatFrom(),
-            'subject' => $subject,
-            'html_body' => $htmlBody,
-        ];
+        try {
+            $client = new Client($baseUrl, $apiKey);
+            $message = new Message();
+            $message->to($to);
+            $message->from($this->formatFrom());
+            $message->subject($subject);
+            $message->htmlBody($htmlBody);
 
-        if ($plainBody !== null) {
-            $payload['plain_body'] = $plainBody;
-        }
+            if ($plainBody !== null) {
+                $message->plainBody($plainBody);
+            }
 
-        $body = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        if ($body === false) {
-            error_log('Erreur envoi email Postal: encodage JSON impossible');
-            return false;
-        }
-
-        $ch = curl_init($baseUrl . '/api/v1/send/message');
-        curl_setopt_array($ch, [
-            CURLOPT_POST => true,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 20,
-            CURLOPT_HTTPHEADER => [
-                'Content-Type: application/json',
-                'X-Server-API-Key: ' . $apiKey,
-            ],
-            CURLOPT_POSTFIELDS => $body,
-        ]);
-
-        $response = curl_exec($ch);
-        $errno = curl_errno($ch);
-        $error = curl_error($ch);
-        $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($errno !== 0) {
-            error_log('Erreur envoi email Postal: ' . $error);
-            return false;
-        }
-
-        $decoded = json_decode((string) $response, true);
-        if ($status >= 200 && $status < 300 && ($decoded['status'] ?? '') === 'success') {
+            $client->send->message($message);
             return true;
+        } catch (\Throwable $e) {
+            error_log('Erreur envoi email Postal: ' . $e->getMessage());
+            return false;
         }
-
-        $message = $decoded['data']['message'] ?? $response;
-        error_log('Erreur envoi email Postal: HTTP ' . $status . ' ' . $message);
-        return false;
     }
 
     private function formatFrom(): string
