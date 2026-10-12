@@ -95,8 +95,9 @@ export DbUser="root"
 export DbPassword=""
 export DbPrefix=""
 
-# Configuration Brevo
-export BrevoApiKey="your_brevo_api_key"
+# Configuration Postal
+export PostalApiUrl="https://postal.example.com"
+export PostalApiKey="your_postal_server_api_key"
 export MailFromEmail="your_email@domain.com"
 export MailFromName="Your Name"
 ```
@@ -111,7 +112,7 @@ cp env.example .env
 
 ### 5. Development Mode
 
-If you don't configure Brevo, the app runs in **development mode**:
+If you don't configure Postal, the app runs in **development mode**:
 - ✅ Login codes are logged to error log
 - ✅ Login codes are displayed on screen
 - ✅ No emails are actually sent
@@ -236,7 +237,7 @@ All settings centralized in `config/config.php`
 ### Production Setup
 
 For production:
-1. Configure Brevo API keys
+1. Configure Postal (`PostalApiUrl`, `PostalApiKey`)
 4. Deploy to your web server
 5. Ensure at least one admin user exists
 

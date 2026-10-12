@@ -1,7 +1,6 @@
 {
     "name": "emnbdx/spreadly",
     "require": {
-        "getbrevo/brevo-php": "^2.0",
         "slim/slim": "^4.15",
         "slim/psr7": "^1.8",
         "php-di/php-di": "^7.1",

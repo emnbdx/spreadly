@@ -16,7 +16,8 @@ return [
     ],
 
     'email' => [
-        'brevo_api_key' => $_SERVER['BrevoApiKey'] ?? '',
+        'postal_api_url' => $_SERVER['PostalApiUrl'] ?? '',
+        'postal_api_key' => $_SERVER['PostalApiKey'] ?? '',
         'mail_from_email' => $_SERVER['MailFromEmail'] ?? '',
         'mail_from_name' => $_SERVER['MailFromName'] ?? '',
         'mail_subject' => $_SERVER['MailSubject'] ?? 'Your love messages',

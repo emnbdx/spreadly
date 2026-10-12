@@ -2,50 +2,25 @@
 
 namespace App\Services;
 
-use \Brevo\Client\Configuration;
-use \Brevo\Client\Api\TransactionalEmailsApi;
-use Brevo\Client\Model\SendSmtpEmail;
-use Brevo\Client\Model\SendSmtpEmailSender;
-use Brevo\Client\Model\SendSmtpEmailTo;
-use GuzzleHttp\Client;
-
 class EmailService
 {
-    private TransactionalEmailsApi $apiInstance;
     private array $config;
 
     public function __construct(array $config)
     {
         $this->config = $config;
-
-        $brevoConfig = Configuration::getDefaultConfiguration()->setApiKey('api-key', $config['brevo_api_key']);
-        $this->apiInstance = new TransactionalEmailsApi(
-            new Client(),
-            $brevoConfig
-        );
     }
 
     public function sendLoginCode(string $email, string $code): bool
     {
-        $sendSmtpEmail = new SendSmtpEmail();
-        $sendSmtpEmail->setSender(new SendSmtpEmailSender([
-            'name' => $this->config['mail_from_name'],
-            'email' => $this->config['mail_from_email']
-        ]));
-        $sendSmtpEmail->setTo([
-            new SendSmtpEmailTo(['email' => $email])
-        ]);
-        $sendSmtpEmail->setSubject('Votre code de connexion pour Spreadly');
-        $sendSmtpEmail->setTextContent("Votre code de connexion est : $code\n\nCe code expirera dans 1 heure.");
-        $sendSmtpEmail->setHtmlContent("<h3>Votre code de connexion</h3><p>Votre code de connexion est : <strong>$code</strong></p><p>Ce code expirera dans 1 heure.</p>");
-
-        try {
-            $result = $this->apiInstance->sendTransacEmail($sendSmtpEmail);
-            return true;
-        } catch (\Exception $e) {
-            error_log('Erreur envoi email: ' . $e->getMessage());
-            return false;
-        }
+        return $this->send(
+            $email,
+            'Votre code de connexion pour Spreadly',
+            "Votre code de connexion est : $code\n\nCe code expirera dans 1 heure.",
+            '<h3>Votre code de connexion</h3><p>Votre code de connexion est : <strong>'
+                . htmlspecialchars($code, ENT_QUOTES, 'UTF-8')
+                . '</strong></p><p>Ce code expirera dans 1 heure.</p>'
+        );
     }
 
     public function sendLoveMessages(array $user, array $loves, string $theme = 'christmas'): bool
@@ -54,26 +29,85 @@ class EmailService
             return true;
         }
 
-        $content = $this->generateEmailContent($loves, $theme);
+        return $this->send(
+            $user['email'],
+            $this->config['mail_subject'],
+            null,
+            $this->generateEmailContent($loves, $theme)
+        );
+    }
 
-        $sendSmtpEmail = new SendSmtpEmail();
-        $sendSmtpEmail->setSender(new SendSmtpEmailSender([
-            'name' => $this->config['mail_from_name'],
-            'email' => $this->config['mail_from_email']
-        ]));
-        $sendSmtpEmail->setTo([
-            new SendSmtpEmailTo(['email' => $user['email']])
-        ]);
-        $sendSmtpEmail->setSubject($this->config['mail_subject']);
-        $sendSmtpEmail->setHtmlContent($content);
+    private function send(string $to, string $subject, ?string $plainBody, string $htmlBody): bool
+    {
+        $baseUrl = rtrim((string) ($this->config['postal_api_url'] ?? ''), '/');
+        $apiKey = (string) ($this->config['postal_api_key'] ?? '');
 
-        try {
-            $result = $this->apiInstance->sendTransacEmail($sendSmtpEmail);
-            return true;
-        } catch (\Exception $e) {
-            error_log('Erreur envoi email: ' . $e->getMessage());
+        if ($baseUrl === '' || $apiKey === '') {
+            error_log('Postal non configuré (PostalApiUrl / PostalApiKey)');
             return false;
         }
+
+        $payload = [
+            'to' => [$to],
+            'from' => $this->formatFrom(),
+            'subject' => $subject,
+            'html_body' => $htmlBody,
+        ];
+
+        if ($plainBody !== null) {
+            $payload['plain_body'] = $plainBody;
+        }
+
+        $body = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if ($body === false) {
+            error_log('Erreur envoi email Postal: encodage JSON impossible');
+            return false;
+        }
+
+        $ch = curl_init($baseUrl . '/api/v1/send/message');
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 20,
+            CURLOPT_HTTPHEADER => [
+                'Content-Type: application/json',
+                'X-Server-API-Key: ' . $apiKey,
+            ],
+            CURLOPT_POSTFIELDS => $body,
+        ]);
+
+        $response = curl_exec($ch);
+        $errno = curl_errno($ch);
+        $error = curl_error($ch);
+        $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($errno !== 0) {
+            error_log('Erreur envoi email Postal: ' . $error);
+            return false;
+        }
+
+        $decoded = json_decode((string) $response, true);
+        if ($status >= 200 && $status < 300 && ($decoded['status'] ?? '') === 'success') {
+            return true;
+        }
+
+        $message = $decoded['data']['message'] ?? $response;
+        error_log('Erreur envoi email Postal: HTTP ' . $status . ' ' . $message);
+        return false;
+    }
+
+    private function formatFrom(): string
+    {
+        $email = (string) ($this->config['mail_from_email'] ?? '');
+        $name = trim((string) ($this->config['mail_from_name'] ?? ''));
+
+        if ($name === '') {
+            return $email;
+        }
+
+        $quoted = '"' . addcslashes($name, '"\\') . '"';
+        return $quoted . ' <' . $email . '>';
     }
 
     public function generateEmailContent(array $loves, string $theme): string
